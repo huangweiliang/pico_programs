@@ -8,6 +8,7 @@ reset.value(1)
 
 WIDTH  = 128                                            # oled display width
 HEIGHT = 64                                             # oled display height
+oldsec = 0
 
 i2c = I2C(0, scl=Pin(9), sda=Pin(8), freq=400000)       # Init I2C using pins GP8 & GP9 (default I2C0 pins)
 device_list=i2c.scan()
@@ -41,8 +42,18 @@ def convert_coordinates(sections):
     data = '{0:.6f}'.format(data)  # 6 decimal places
     return str(data)
 #######
+# Initialize SPI
+spi = machine.SPI(0,
+                  baudrate=100000000,
+                  polarity=1,
+                  phase=1,
+                  bits=8,
+                  firstbit=machine.SPI.MSB,
+                  sck=machine.Pin(18),
+                  mosi=machine.Pin(19),
+                  miso=machine.Pin(16))
 
-
+spi.write(b"\x35")
 while True:
     length = gps_module.any()
     if length > 0:
@@ -62,14 +73,18 @@ while True:
 
     
     oled.fill(0)
-    oled.text('Satellites: ' + str(gps.satellites_in_use), 0, 0)
-    oled.text('Lat: ' + latitude, 0, 12)
-    print('Lat: ' + latitude)
-    oled.text('Lon: ' + longitude, 0, 24)
-    print('Lon: ' + longitude)
-    print("date: ",  gps.date[0] , gps.date[1] , gps.date[2])
-    oled.text('Date: ' + str(gps.date[1]) + '/' + str(gps.date[0]) + '/' + str(gps.date[2]), 0, 36)
-    print("time: ",  gps.timestamp[0] , gps.timestamp[1] , gps.timestamp[2])
-    oled.text('time: ' + str(gps.timestamp[0]) + ':' + str(gps.timestamp[1]) + ':' + str(gps.timestamp[2]), 0, 48)
-
+    oled.text(' ' + str(gps.date[1]) + '/' + str(gps.date[0]) + '/' + str(gps.date[2]), 0, 0)
+    oled.text(' ' + str(gps.timestamp[0]) + ':' + str(gps.timestamp[1]) + ':' + str(gps.timestamp[2]), 0, 12)
+    oled.text('Satellites: ' + str(gps.satellites_in_use), 0, 24)
+    ##oled.text('Lat: ' + latitude, 0, 12)
+    ##print('Lat: ' + latitude)
+    ##oled.text('Lon: ' + longitude, 0, 24)
+    ##print('Lon: ' + longitude)
+    
+    spi.write(b"\x35")
     oled.show()
+    
+    if oldsec != gps.timestamp[2]:
+        print("date: ",  gps.date[0] , gps.date[1] , gps.date[2])
+        print("time: ",  gps.timestamp[0] , gps.timestamp[1] , gps.timestamp[2])
+        oldsec = gps.timestamp[2]
